@@ -1,4 +1,5 @@
 import struct
+import ipaddress
 from functools import lru_cache
 from typing import Any
 
@@ -96,24 +97,23 @@ class MacAddress(Field):
 class IPAddress(Field):
     FORMAT = "4s"
 
-    def __init__(self, name="mac", default="0.0.0.0"):
-        super().__init__(name, self.str2mac(default))
+    def __init__(self, name="ip", default="0.0.0.0"):
+        super.__init__(name, ipaddress.IPv4Address(default))
 
     def format_val(self):
-        return self.mac2str(self.val)
+        return self.str2ip(self.val)
 
     def set(self, value):
         if type(value) is str:
-            value = self.str2mac(value)
-
+            value = self.str2ip(value)
         super().set(value)
 
     @staticmethod
     @lru_cache()
     def str2ip(val):
-        return bytes.fromhex(val.replace(".", ''))
+        return ipaddress.IPv4Address(val)
 
     @staticmethod
     @lru_cache()
     def ip2str(mac):
-        return ".".join("{:02X}".format(octet) for octet in mac)
+        return str(self.val)

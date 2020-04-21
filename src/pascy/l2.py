@@ -2,7 +2,7 @@ from pascy.layer import Layer
 from pascy.fields import *
 
 MAC_BROADCAST = "FF:FF:FF:FF:FF:FF"
-
+IP_BROADCAST = "0.0.0.0"
 
 class ArpLayer(Layer):
     OP_WHO_HAS = 1
@@ -13,7 +13,12 @@ class ArpLayer(Layer):
     @staticmethod
     def fields_info():
         # TODO: Implement this :)
-        return [MacAddress("dst", MAC_BROADCAST), ]
+        return [ UnsignedShort("hardware_type", 1), UnsignedShort("protocol_type", 0x800),
+                UnsignedByte("hardware_size", 6), UnsignedByte("protocol_size", 4),
+                UnsignedShort("opcode", OP_WHO_HAS), 
+                MacAddress("src"), IPAddress("src"),
+                MacAddress("dst", MAC_BROADCAST), 
+                IPAddress("dst", IP_BROADCAST)]
 
 class EthernetLayer(Layer):
     NAME = "Ethernet"
