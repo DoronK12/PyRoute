@@ -92,3 +92,28 @@ class MacAddress(Field):
     @lru_cache()
     def mac2str(mac):
         return ":".join("{:02X}".format(octet) for octet in mac)
+
+class IPAddress(Field):
+    FORMAT = "4s"
+
+    def __init__(self, name="mac", default="0.0.0.0"):
+        super().__init__(name, self.str2mac(default))
+
+    def format_val(self):
+        return self.mac2str(self.val)
+
+    def set(self, value):
+        if type(value) is str:
+            value = self.str2mac(value)
+
+        super().set(value)
+
+    @staticmethod
+    @lru_cache()
+    def str2ip(val):
+        return bytes.fromhex(val.replace(".", ''))
+
+    @staticmethod
+    @lru_cache()
+    def ip2str(mac):
+        return ".".join("{:02X}".format(octet) for octet in mac)

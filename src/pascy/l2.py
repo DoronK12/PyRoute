@@ -13,8 +13,7 @@ class ArpLayer(Layer):
     @staticmethod
     def fields_info():
         # TODO: Implement this :)
-        pass
-
+        return [MacAddress("dst", MAC_BROADCAST), ]
 
 class EthernetLayer(Layer):
     NAME = "Ethernet"
@@ -28,3 +27,6 @@ class EthernetLayer(Layer):
         return [MacAddress("dst", MAC_BROADCAST),
                 MacAddress("src"),
                 UnsignedShort("ether_type", 0)]
+
+class IPLayer(Layer):
+    NAME = "IP"
