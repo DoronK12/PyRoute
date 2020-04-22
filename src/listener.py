@@ -1,5 +1,14 @@
 import select
 import socket
+from pascy.l2 import *
+import sys
+
+def parse_buffer(buffer):
+	# Ethernet part
+	ether = EthernetLayer()
+	ether.deserialize(buffer[:14])
+	# for field in ether.fields:
+	# 	print(field)
 
 def create_sockets():
 	read_sockets = []
@@ -29,7 +38,7 @@ def main():
 
 			try:
 				data = current_socket.recv(1024)
-				print(data)
+				parse_buffer(data)
 
 			except socket.error:
 				continue

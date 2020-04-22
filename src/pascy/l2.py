@@ -20,20 +20,17 @@ class ArpLayer(Layer):
                 MacAddress("dst", MAC_BROADCAST), 
                 IPAddress("dst", IP_BROADCAST)]
 
-class EthernetLayer(Layer):
-    NAME = "Ethernet"
 
-    SUB_LAYERS = [
-        [ArpLayer, "ether_type", 0x806],
-        [IPLayer, "ether_type", 0x800]
-    ]
+class IcmpLayer(Layer):
+    PING_REQUEST = 8
+    PING_REPLY = 0
+
+    NAME = "ICMP"
 
     @staticmethod
     def fields_info():
-        return [MacAddress("dst", MAC_BROADCAST),
-                MacAddress("src"),
-                UnsignedShort("ether_type", 0)]
-
+        return [UnsignedByte('type', PING_REPLY), UnsignedByte('code', 0), UnsignedShort('checksum', 0),
+                UnsignedInteger('headers', 0), UnsignedLong('payload_data', 0)]
 
 class IPLayer(Layer):
     NAME = "IP"
@@ -50,11 +47,18 @@ class IPLayer(Layer):
                 IPAddress('src'), IPAddress('dst', IP_BROADCAST)]
 
 
-class IcmpLayer(Layer):
 
-    NAME = "ICMP"
+class EthernetLayer(Layer):
+    NAME = "Ethernet"
+
+    SUB_LAYERS = [
+        [ArpLayer, "ether_type", 0x806],
+        [IPLayer, "ether_type", 0x800]
+    ]
 
     @staticmethod
     def fields_info():
-        return [UnsignedByte('type', 0), UnsignedByte('code', 0), UnsignedShort('checksum', 0)
-                UnsignedInteger('headers', 0), UnsignedLong('payload_data', 0)]
+        return [MacAddress("dst", MAC_BROADCAST),
+                MacAddress("src"),
+                UnsignedShort("ether_type", 0)]
+

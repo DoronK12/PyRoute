@@ -45,7 +45,7 @@ class Field:
     
     def deserialize(self, buffer: bytes):
         self.val = struct.unpack(self.ENDIANITY + self.FORMAT, buffer[:self.size])[0]
-
+        # print(self)
 
 class UnsignedByte(Field):
     FORMAT = 'B'
