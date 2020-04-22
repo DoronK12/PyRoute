@@ -25,6 +25,7 @@ class EthernetLayer(Layer):
 
     SUB_LAYERS = [
         [ArpLayer, "ether_type", 0x806],
+        [IPLayer, "ether_type", 0x800]
     ]
 
     @staticmethod
@@ -37,10 +38,23 @@ class EthernetLayer(Layer):
 class IPLayer(Layer):
     NAME = "IP"
     
+    SUB_LAYERS = [
+        [IcmpLayer, "protocol", 1]
+    ]
     @staticmethod
     def fields_info():
         return [UnsignedByte('version_IHL', 0x45), UnsignedByte('service_type', 0), 
                 UnsignedShort('total_length', 0), UnsignedShort('identification', 0),
                 UnsignedShort('flags_frame_offset', 0x4000), UnsignedByte('TTL', 0),
                 UnsignedByte('protocol', 6), UnsignedShort('checksum', 0),
-                IPAddress('src'), IPAddress('dst', IP_BROADCAST)]    
+                IPAddress('src'), IPAddress('dst', IP_BROADCAST)]
+
+
+class IcmpLayer(Layer):
+
+    NAME = "ICMP"
+
+    @staticmethod
+    def fields_info():
+        return [UnsignedByte('type', 0), UnsignedByte('code', 0), UnsignedShort('checksum', 0)
+                UnsignedInteger('headers', 0), UnsignedLong('payload_data', 0)]
