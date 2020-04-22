@@ -45,7 +45,6 @@ class Field:
     
     def deserialize(self, buffer: bytes):
         self.val = struct.unpack(self.ENDIANITY + self.FORMAT, buffer[:self.size])[0]
-        # print(self)
 
 class UnsignedByte(Field):
     FORMAT = 'B'
@@ -98,7 +97,7 @@ class IPAddress(Field):
     FORMAT = "4s"
 
     def __init__(self, name="ip", default="0.0.0.0"):
-        super.__init__(name, ipaddress.IPv4Address(default))
+        super().__init__(name, self.str2ip(default))
 
     def format_val(self):
         return self.str2ip(self.val)
@@ -108,6 +107,12 @@ class IPAddress(Field):
             value = self.str2ip(value)
         super().set(value)
 
+    def serialize(self) -> bytes:
+        return struct.pack(self.ENDIANITY + self.FORMAT, str(self.val.packed()))
+    
+    def deserialize(self, buffer: bytes):
+        self.val = self.str2ip(struct.unpack(self.ENDIANITY + self.FORMAT, buffer[:self.size])[0])
+
     @staticmethod
     @lru_cache()
     def str2ip(val):
@@ -115,5 +120,5 @@ class IPAddress(Field):
 
     @staticmethod
     @lru_cache()
-    def ip2str(mac):
-        return str(self.val)
+    def ip2str(ip):
+        return str(ip)

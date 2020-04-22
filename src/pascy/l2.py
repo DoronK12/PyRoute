@@ -15,10 +15,10 @@ class ArpLayer(Layer):
         # TODO: Implement this :)
         return [ UnsignedShort("hardware_type", 1), UnsignedShort("protocol_type", 0x800),
                 UnsignedByte("hardware_size", 6), UnsignedByte("protocol_size", 4),
-                UnsignedShort("opcode", OP_WHO_HAS), 
-                MacAddress("src"), IPAddress("src"),
-                MacAddress("dst", MAC_BROADCAST), 
-                IPAddress("dst", IP_BROADCAST)]
+                UnsignedShort("opcode", ArpLayer.OP_IS_AT), 
+                MacAddress("mac_src"), IPAddress("ip_src"),
+                MacAddress("mac_dst", MAC_BROADCAST), 
+                IPAddress("ip_dst", IP_BROADCAST)]
 
 
 class IcmpLayer(Layer):
@@ -29,7 +29,7 @@ class IcmpLayer(Layer):
 
     @staticmethod
     def fields_info():
-        return [UnsignedByte('type', PING_REPLY), UnsignedByte('code', 0), UnsignedShort('checksum', 0),
+        return [UnsignedByte('type', IcmpLayer.PING_REPLY), UnsignedByte('code', 0), UnsignedShort('checksum', 0),
                 UnsignedInteger('headers', 0), UnsignedLong('payload_data', 0)]
 
 class IPLayer(Layer):

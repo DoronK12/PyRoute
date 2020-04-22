@@ -109,11 +109,8 @@ class Layer(ABC):
         index = 0
         for field in self.fields_info():
             data = buffer[index:(index + field.size)]
-            print(self.fields[field.name])
             self.fields[field.name].deserialize(data)
             index += (field.size)
-        # for field in self.fields:
-        #     print(field)
 
     def build(self) -> bytes:
         """
