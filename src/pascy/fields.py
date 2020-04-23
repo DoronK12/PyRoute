@@ -108,7 +108,7 @@ class IPAddress(Field):
         super().set(value)
 
     def serialize(self) -> bytes:
-        return struct.pack(self.ENDIANITY + self.FORMAT, str(self.val.packed()))
+        return struct.pack(self.ENDIANITY + self.FORMAT, self.val.packed)
     
     def deserialize(self, buffer: bytes):
         self.val = self.str2ip(struct.unpack(self.ENDIANITY + self.FORMAT, buffer[:self.size])[0])
