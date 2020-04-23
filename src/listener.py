@@ -25,37 +25,82 @@ def get_network_by_ip(ip):
 			return network
 	return ""
 
-def parse_buffer(buffer, current_socket):
+def verify_addresses(ip_address, mac_address):
+	
+	if ip_address in ROUTING_TABLE["net1"].keys():
+			# For regular Router behavior
+			if ROUTING_TABLE["net1"][ip_address] != mac_address:
+				ROUTING_TABLE["net1"][ip_address] = mac_address
+			return True
+		
+	elif ip_address in ROUTING_TABLE["net2"].keys():
+		# For regular Router behavior
+		if ROUTING_TABLE["net2"][ip_address] != mac_address:
+			ROUTING_TABLE["net2"][ip_address] = mac_address
+		return True
+	else:
+		return False
+
+def parse_buffer(buffer):
 	# Ethernet part
 	ethernet_layer = EthernetLayer()
 	ethernet_layer.deserialize(buffer[:14])
-	# for field in ethernet_layer.fields:
-	# 	print(ethernet_layer.fields[field])
 
 	destination_mac = MacAddress.mac2str(ethernet_layer.fields["dst"].get())
 	ethernet_type = ethernet_layer.fields["ether_type"].get()
 
 	if destination_mac == MAC_BROADCAST and ethernet_type == 0x806:
-		parse_ARP(buffer[14:], ethernet_layer, current_socket)
+		parse_ARP(buffer[14:], ethernet_layer)
 
-	# If the packet is for us
-	elif destination_mac == MY_ADDRESSES["net1"][0] or destination_mac == MY_ADDRESSES["net2"][0]:
-		if ethernet_type == 0x800:
-			parse_IP(buffer[14:], ethernet_layer, current_socket)
+	elif ethernet_type == 0x800:
+		parse_IP(buffer, ethernet_layer)
 
 
-def parse_IP(buffer, ethernet_layer, current_socket):
-	pass
+def parse_IP(buffer, ethernet_layer):
+	#IP part
+	ip_layer = IPLayer()
+	ip_layer.deserialize(buffer[14:34])
+
+	# Calculate the checksum and verify it.
+	if IPLayer.checksum(buffer[14:34]) == ip_layer.fields["checksum"].get():
+
+		destination_ip = IPAddress.ip2str(ip_layer.fields["dst"].get())
+		source_ip = IPAddress.ip2str(ip_layer.fields["src"].get())
+
+		if not verify_addresses(source_ip, MacAddress.mac2str(ethernet_layer.fields["src"].get())):
+			return
+
+		if destination_ip == MY_ADDRESSES["net1"][1] or destination_ip == MY_ADDRESSES["net2"][1]:
+			pass
+			# The destination is ME!
+			# if ip_layer.fields["protocol"].get()
+
+		# If the packet need to be forward
+		elif destination_ip in ROUTING_TABLE["net1"].keys() or destination_ip in ROUTING_TABLE["net2"].keys():
 
 
-def parse_ARP(buffer, ethernet_layer, current_socket):
+			network = get_network_by_ip(IPAddress.ip2str(destination_ip))
+
+			ethernet_layer.fields["src"].set(MacAddress.str2mac(MY_ADDRESSES[network][0]))
+
+			ethernet_layer.fields["dst"].set(MacAddress.str2mac(ROUTING_TABLE[network][destination_ip]))
+
+			buffer = buffer[14:]
+
+			buffer = ethernet_layer.build() + buffer
+
+			PACKETS_TO_SEND.append((find_network_place(network) , buffer))
+
+			print("Packet forward")
+		else:
+			return
+
+
+
+def parse_ARP(buffer, ethernet_layer):
 	#ARP part
 	arp_layer = ArpLayer()
 	arp_layer.deserialize(buffer[:28])
-	
-	# Debug printing
-	for field in arp_layer.fields:
-		print(arp_layer.fields[field])
 
 	destination_ip = IPAddress.ip2str(arp_layer.fields["ip_dst"].get())
 
@@ -63,25 +108,15 @@ def parse_ARP(buffer, ethernet_layer, current_socket):
 
 		src_ip = IPAddress.ip2str(arp_layer.fields["ip_src"].get())
 		
-		if src_ip in ROUTING_TABLE["net1"].keys():
-			# For regular Router behavior
-			if ROUTING_TABLE["net1"][src_ip] != MacAddress.mac2str(arp_layer.fields["mac_src"].get()):
-				ROUTING_TABLE["net1"][src_ip] = MacAddress.mac2str(arp_layer.fields["mac_src"].get())
-		
-		elif src_ip in ROUTING_TABLE["net2"].keys():
-			# For regular Router behavior
-			if ROUTING_TABLE["net2"][src_ip] != MacAddress.mac2str(arp_layer.fields["mac_src"].get()):
-				ROUTING_TABLE["net2"][src_ip] = MacAddress.mac2str(arp_layer.fields["mac_src"].get())
-		
-		else:
+		if not verify_addresses(src_ip, MacAddress.mac2str(arp_layer.fields["mac_src"].get())):
 			return
 
 		if arp_layer.fields["opcode"].get() == ArpLayer.OP_WHO_HAS:
 			# ethernet_layer.connect_layer(arp_layer)
-			build_ARP_response(ethernet_layer, arp_layer, current_socket)
+			build_ARP_response(ethernet_layer, arp_layer)
 
 
-def build_ARP_response(ethernet_layer, arp_layer, current_socket):
+def build_ARP_response(ethernet_layer, arp_layer):
 	global PACKETS_TO_SEND
 
 	network = get_network_by_ip(IPAddress.ip2str(arp_layer.fields["ip_src"].get()))
@@ -91,6 +126,7 @@ def build_ARP_response(ethernet_layer, arp_layer, current_socket):
 
 	ethernet_layer.fields["src"].set(MacAddress.str2mac(MY_ADDRESSES[network][0]))
 
+	# Change the addresses in the ARP Layer and the opcode.
 	arp_layer.fields["opcode"].set(ArpLayer.OP_IS_AT)
 
 	arp_layer.fields["ip_dst"].set(arp_layer.fields["ip_src"].get())
@@ -103,14 +139,14 @@ def build_ARP_response(ethernet_layer, arp_layer, current_socket):
 
 	ethernet_layer.connect_layer(arp_layer)
 
-	PACKETS_TO_SEND.append((current_socket, ethernet_layer.build()))
-	# print("RESPONSE*****************")
-	# ethernet_layer.display()
+	PACKETS_TO_SEND.append((find_network_place(network) , ethernet_layer.build()))
 
+	print("ARP response sent")
 
 
 
 def create_sockets():
+
 	read_sockets = []
 	read_sockets.append(socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(socket.PACKET_OTHERHOST)))
 	read_sockets[0].bind(('net1', 0))
@@ -118,11 +154,8 @@ def create_sockets():
 	read_sockets[1].bind(('net2', 0))
 	return read_sockets
 
-def find_socket_place(read_sockets, new_socket):
-	for sock in read_sockets:
-		if sock == new_socket:
-			return read_sockets.index(sock)
-	return -1
+def find_network_place(network):
+	return list(ROUTING_TABLE.keys()).index(network)
 
 def main():
 	global PACKETS_TO_SEND
@@ -138,15 +171,15 @@ def main():
 
 			try:
 				data = current_socket.recv(1024)
-				parse_buffer(data, current_socket)
+				parse_buffer(data)
 
 			except socket.error:
 				continue
 
 		for packet in PACKETS_TO_SEND:
-			(client_socket, pack) = packet
-			if client_socket in wlist:
-				client_socket.send(pack)
+			(client_index, pack) = packet
+			if read_sockets[client_index] in wlist:
+				read_sockets[client_index].send(pack)
 			PACKETS_TO_SEND.remove(packet)
 
 	for sock in read_sockets:

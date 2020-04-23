@@ -34,6 +34,9 @@ class IcmpLayer(Layer):
 
 class IPLayer(Layer):
     NAME = "IP"
+
+    SHORT_MAX = 0xffff
+    SHORT_SIZE = 16
     
     SUB_LAYERS = [
         [IcmpLayer, "protocol", 1]
@@ -45,6 +48,28 @@ class IPLayer(Layer):
                 UnsignedShort('flags_frame_offset', 0x4000), UnsignedByte('TTL', 0),
                 UnsignedByte('protocol', 6), UnsignedShort('checksum', 0),
                 IPAddress('src'), IPAddress('dst', IP_BROADCAST)]
+
+    @staticmethod
+    def checksum(msg):
+        s = 0
+          # loop taking 2 characters at a time
+        for i in range(0, len(msg), 2):
+            if i != 10:
+                if (i+1) < len(msg):
+                    a = msg[i]
+                    b = msg[i+1]
+                    s = s + (b+(a << 8))
+                else:
+                    raise "Something Wrong here"
+
+        # minimize the number to 16 bit
+        while s > IPLayer.SHORT_MAX:
+            carry = s >> IPLayer.SHORT_SIZE
+            s = s & IPLayer.SHORT_MAX
+            s += carry
+        
+        return ~s & IPLayer.SHORT_MAX
+
 
 
 
