@@ -35,7 +35,7 @@ class Layer(ABC):
             return self.__dict__[key]
 
         elif key in self.fields.keys():
-            return self.fields[key].get()
+            return self.fields[key]
 
     def __setattr__(self, key, val):
         if key in self.fields:
@@ -106,8 +106,11 @@ class Layer(ABC):
         """
         Deserialize this layer from a buffer
         """
-        # TODO: Implement this :)
-        pass
+        index = 0
+        for field in self.fields_info():
+            data = buffer[index:(index + field.size)]
+            self.fields[field.name].deserialize(data)
+            index += (field.size)
 
     def build(self) -> bytes:
         """

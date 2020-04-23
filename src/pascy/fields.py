@@ -1,4 +1,5 @@
 import struct
+import ipaddress
 from functools import lru_cache
 from typing import Any
 
@@ -44,7 +45,6 @@ class Field:
     
     def deserialize(self, buffer: bytes):
         self.val = struct.unpack(self.ENDIANITY + self.FORMAT, buffer[:self.size])[0]
-
 
 class UnsignedByte(Field):
     FORMAT = 'B'
@@ -92,3 +92,33 @@ class MacAddress(Field):
     @lru_cache()
     def mac2str(mac):
         return ":".join("{:02X}".format(octet) for octet in mac)
+
+class IPAddress(Field):
+    FORMAT = "4s"
+
+    def __init__(self, name="ip", default="0.0.0.0"):
+        super().__init__(name, self.str2ip(default))
+
+    def format_val(self):
+        return self.str2ip(self.val)
+
+    def set(self, value):
+        if type(value) is str:
+            value = self.str2ip(value)
+        super().set(value)
+
+    def serialize(self) -> bytes:
+        return struct.pack(self.ENDIANITY + self.FORMAT, self.val.packed)
+    
+    def deserialize(self, buffer: bytes):
+        self.val = self.str2ip(struct.unpack(self.ENDIANITY + self.FORMAT, buffer[:self.size])[0])
+
+    @staticmethod
+    @lru_cache()
+    def str2ip(val):
+        return ipaddress.IPv4Address(val)
+
+    @staticmethod
+    @lru_cache()
+    def ip2str(ip):
+        return str(ip)
